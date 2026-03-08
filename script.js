@@ -84,6 +84,7 @@ const holdCtx = holdCanvas.getContext("2d");
 const startBtn = document.getElementById("startBtn");
 const restartBtn = document.getElementById("restartBtn");
 const soundToggleBtn = document.getElementById("soundToggleBtn");
+const touchButtons = document.querySelectorAll(".touch-btn");
 
 let score = 0;
 let level = 1;
@@ -120,6 +121,8 @@ let lockEffect = null;
 let hardDropEffect = null;
 let gameOverAnimStartMs = null;
 let renderLoopId = null;
+let touchMoveTimerId = null;
+let activeTouchMoveAction = null;
 
 function createEmptyBoard() {
   return Array.from({ length: ROWS }, () => Array(COLS).fill(EMPTY_CELL));
@@ -866,6 +869,89 @@ function holdActivePiece() {
   startDropLoop();
 }
 
+function startContinuousHorizontalMove(action) {
+  const dx = action === "left" ? -1 : 1;
+  moveActivePiece(dx, 0);
+  stopContinuousTouchMove();
+  activeTouchMoveAction = action;
+  touchMoveTimerId = window.setInterval(() => {
+    moveActivePiece(dx, 0);
+  }, 105);
+}
+
+function startSoftDropTouch() {
+  if (!activePiece || isGameOver || isPaused || isLineClearAnimating) {
+    return;
+  }
+
+  if (!isSoftDropping) {
+    isSoftDropping = true;
+    startDropLoop();
+  }
+  moveActivePiece(0, 1);
+}
+
+function stopSoftDropTouch() {
+  if (!isSoftDropping) {
+    return;
+  }
+
+  isSoftDropping = false;
+  if (activePiece && !isGameOver && !isPaused && !isLineClearAnimating) {
+    startDropLoop();
+  }
+}
+
+function stopContinuousTouchMove() {
+  if (touchMoveTimerId) {
+    window.clearInterval(touchMoveTimerId);
+    touchMoveTimerId = null;
+  }
+  activeTouchMoveAction = null;
+}
+
+function handleTouchControlPress(action) {
+  if (action === "pause") {
+    togglePause();
+    return;
+  }
+
+  if (!activePiece || isGameOver || isPaused || isLineClearAnimating) {
+    return;
+  }
+
+  switch (action) {
+    case "left":
+    case "right":
+      startContinuousHorizontalMove(action);
+      break;
+    case "down":
+      startSoftDropTouch();
+      break;
+    case "rotate":
+      rotateActivePiece();
+      break;
+    case "hard-drop":
+      hardDropActivePiece();
+      break;
+    case "hold":
+      holdActivePiece();
+      break;
+    default:
+      break;
+  }
+}
+
+function handleTouchControlRelease(action) {
+  if (action === "down") {
+    stopSoftDropTouch();
+  }
+
+  if (action === activeTouchMoveAction) {
+    stopContinuousTouchMove();
+  }
+}
+
 function stepActivePieceDown() {
   if (!activePiece || isGameOver || isPaused || isLineClearAnimating) {
     return;
@@ -982,6 +1068,7 @@ function initializeUI() {
   stopBackgroundMusic();
   drawNextPiecePreview();
   drawHoldPiecePreview();
+  stopContinuousTouchMove();
   startRenderLoop();
 }
 
@@ -1011,6 +1098,7 @@ function startNewGame() {
   drawHoldPiecePreview();
   spawnPieceFromQueue(true);
   startBackgroundMusic();
+  stopContinuousTouchMove();
   startDropLoop();
 }
 
@@ -1091,6 +1179,31 @@ soundToggleBtn.addEventListener("click", () => {
   toggleMuted();
   ensureAudioContext();
 });
+
+for (const button of touchButtons) {
+  const action = button.dataset.action;
+  if (!action) {
+    continue;
+  }
+
+  button.addEventListener("pointerdown", (event) => {
+    event.preventDefault();
+    if (button.setPointerCapture && event.pointerId !== undefined) {
+      button.setPointerCapture(event.pointerId);
+    }
+    handleTouchControlPress(action);
+  });
+
+  const release = (event) => {
+    event.preventDefault();
+    handleTouchControlRelease(action);
+  };
+
+  button.addEventListener("pointerup", release);
+  button.addEventListener("pointercancel", release);
+  button.addEventListener("pointerleave", release);
+}
+
 document.addEventListener("keydown", handleKeyDown);
 document.addEventListener("keyup", handleKeyUp);
 

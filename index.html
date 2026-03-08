@@ -22,6 +22,16 @@
             <button id="startBtn" type="button">Start Game</button>
             <button id="restartBtn" type="button">Restart Game</button>
           </div>
+
+          <div class="touch-controls" aria-label="Touch controls for mobile">
+            <button class="touch-btn" data-action="left" type="button" aria-label="Move left">←</button>
+            <button class="touch-btn" data-action="rotate" type="button" aria-label="Rotate">↑</button>
+            <button class="touch-btn" data-action="right" type="button" aria-label="Move right">→</button>
+            <button class="touch-btn" data-action="down" type="button" aria-label="Soft drop">↓</button>
+            <button class="touch-btn" data-action="hard-drop" type="button" aria-label="Hard drop">DROP</button>
+            <button class="touch-btn" data-action="hold" type="button" aria-label="Hold piece">HOLD</button>
+            <button class="touch-btn" data-action="pause" type="button" aria-label="Pause or resume">PAUSE</button>
+          </div>
         </section>
 
         <aside class="side-panel">
@@ -60,6 +70,14 @@
           <div class="stat-card">
             <p class="stat-label">Audio</p>
             <button id="soundToggleBtn" type="button">Sound: On</button>
+          </div>
+
+          <div class="stat-card instructions">
+            <p class="stat-label">How To Play</p>
+            <p class="instruction-line">Keyboard: ← → move</p>
+            <p class="instruction-line">Keyboard: ↑ rotate, ↓ soft drop</p>
+            <p class="instruction-line">Keyboard: Space drop, C hold, P pause</p>
+            <p class="instruction-line">Mobile: use arrow buttons below board</p>
           </div>
         </aside>
       </div>

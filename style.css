@@ -23,6 +23,7 @@ body {
   font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
   background: var(--bg);
   color: var(--text);
+  touch-action: manipulation;
 }
 
 .app {
@@ -51,12 +52,37 @@ body {
   display: block;
   border: 2px solid #0f172a;
   background: #f8fafc;
+  width: min(92vw, 300px);
+  height: auto;
 }
 
 .controls {
   display: flex;
   gap: 0.75rem;
   justify-content: center;
+}
+
+.touch-controls {
+  display: none;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.45rem;
+}
+
+.touch-btn {
+  min-height: 44px;
+  padding: 0.5rem 0.4rem;
+  font-size: 1rem;
+  font-weight: 700;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #e2e8f0;
+  color: #0f172a;
+}
+
+.touch-btn[data-action="hard-drop"],
+.touch-btn[data-action="hold"],
+.touch-btn[data-action="pause"] {
+  font-size: 0.78rem;
 }
 
 .side-panel {
@@ -84,6 +110,16 @@ body {
   margin: 0;
   font-size: 1.35rem;
   font-weight: 700;
+}
+
+.instructions {
+  grid-column: 1 / -1;
+}
+
+.instruction-line {
+  margin: 0.18rem 0;
+  font-size: 0.75rem;
+  color: var(--text);
 }
 
 #nextCanvas,
@@ -127,11 +163,19 @@ button:hover {
 
   .side-panel {
     width: min(100%, 300px);
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(2, 1fr);
   }
 
   #nextCanvas,
   #holdCanvas {
     margin: 0 auto;
+  }
+
+  .touch-controls {
+    display: grid;
+  }
+
+  .instruction-line {
+    font-size: 0.72rem;
   }
 }
