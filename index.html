@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Tetris</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <main class="app">
+      <div class="game-layout">
+        <section class="board-wrap">
+          <canvas
+            id="gameCanvas"
+            width="300"
+            height="600"
+            aria-label="Tetris game board"
+            role="img"
+          ></canvas>
+
+          <div class="controls">
+            <button id="startBtn" type="button">Start Game</button>
+            <button id="restartBtn" type="button">Restart Game</button>
+          </div>
+        </section>
+
+        <aside class="side-panel">
+          <div class="stat-card">
+            <p class="stat-label">Hold</p>
+            <canvas
+              id="holdCanvas"
+              width="120"
+              height="120"
+              aria-label="Held tetris piece preview"
+              role="img"
+            ></canvas>
+          </div>
+
+          <div class="stat-card">
+            <p class="stat-label">Score</p>
+            <p class="stat-value" id="score">0</p>
+          </div>
+
+          <div class="stat-card">
+            <p class="stat-label">Level</p>
+            <p class="stat-value" id="level">1</p>
+          </div>
+
+          <div class="stat-card">
+            <p class="stat-label">Next</p>
+            <canvas
+              id="nextCanvas"
+              width="120"
+              height="120"
+              aria-label="Next tetris piece preview"
+              role="img"
+            ></canvas>
+          </div>
+
+          <div class="stat-card">
+            <p class="stat-label">Audio</p>
+            <button id="soundToggleBtn" type="button">Sound: On</button>
+          </div>
+        </aside>
+      </div>
+
+      <p class="status" id="status" aria-live="polite"></p>
+    </main>
+
+    <script src="script.js"></script>
+  </body>
+</html>
