@@ -19,6 +19,11 @@ const SCORE_BY_LINES = {
   3: 500,
   4: 800,
 };
+const TAP_MAX_MOVEMENT_PX = 18;
+const TAP_MAX_DURATION_MS = 260;
+const SWIPE_DOWN_MIN_DISTANCE_PX = 55;
+const FAST_SWIPE_SPEED_PX_PER_MS = 1.25;
+const UPPER_ROTATE_REGION_RATIO = 0.36;
 
 const TETROMINOES = [
   { name: "I", color: "#14b8a6", shape: [[1, 1, 1, 1]] },
@@ -75,6 +80,7 @@ const TETROMINOES = [
 const scoreEl = document.getElementById("score");
 const levelEl = document.getElementById("level");
 const statusEl = document.getElementById("status");
+const appEl = document.querySelector(".app");
 const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
 const nextCanvas = document.getElementById("nextCanvas");
@@ -83,8 +89,14 @@ const holdCanvas = document.getElementById("holdCanvas");
 const holdCtx = holdCanvas.getContext("2d");
 const startBtn = document.getElementById("startBtn");
 const restartBtn = document.getElementById("restartBtn");
+const fullscreenBtn = document.getElementById("fullscreenBtn");
+const installBtn = document.getElementById("installBtn");
 const soundToggleBtn = document.getElementById("soundToggleBtn");
-const touchButtons = document.querySelectorAll(".touch-btn");
+const mobileLeftBtn = document.getElementById("mobileLeftBtn");
+const mobileRightBtn = document.getElementById("mobileRightBtn");
+const mobileRotateBtn = document.getElementById("mobileRotateBtn");
+const mobileSoftDropBtn = document.getElementById("mobileSoftDropBtn");
+const mobileHardDropBtn = document.getElementById("mobileHardDropBtn");
 
 let score = 0;
 let level = 1;
@@ -121,8 +133,82 @@ let lockEffect = null;
 let hardDropEffect = null;
 let gameOverAnimStartMs = null;
 let renderLoopId = null;
-let touchMoveTimerId = null;
-let activeTouchMoveAction = null;
+let isTouchScreenDevice = false;
+let touchStartX = 0;
+let touchStartY = 0;
+let touchStartTimeMs = 0;
+let isTrackingTouchGesture = false;
+let lastTouchTapTimeMs = 0;
+let mobileSoftDropTimerId = null;
+let deferredInstallPrompt = null;
+
+function isFullscreenActive() {
+  return Boolean(document.fullscreenElement || document.webkitFullscreenElement);
+}
+
+function updateFullscreenButtonLabel() {
+  if (!fullscreenBtn) {
+    return;
+  }
+
+  fullscreenBtn.textContent = isFullscreenActive()
+    ? "Exit Fullscreen"
+    : "Fullscreen";
+}
+
+function syncFullscreenLayoutState() {
+  document.body.classList.toggle("is-fullscreen", isFullscreenActive());
+  updateFullscreenButtonLabel();
+}
+
+function updateInstallButtonVisibility() {
+  if (!installBtn) {
+    return;
+  }
+
+  installBtn.hidden = !deferredInstallPrompt;
+}
+
+async function promptInstall() {
+  if (!deferredInstallPrompt) {
+    return;
+  }
+
+  deferredInstallPrompt.prompt();
+  try {
+    await deferredInstallPrompt.userChoice;
+  } catch {
+    // Ignore user cancellation.
+  }
+
+  deferredInstallPrompt = null;
+  updateInstallButtonVisibility();
+}
+
+async function toggleFullscreen() {
+  const isActive = isFullscreenActive();
+
+  try {
+    if (isActive) {
+      if (document.exitFullscreen) {
+        await document.exitFullscreen();
+      } else if (document.webkitExitFullscreen) {
+        document.webkitExitFullscreen();
+      }
+      return;
+    }
+
+    if (appEl.requestFullscreen) {
+      await appEl.requestFullscreen();
+    } else if (appEl.webkitRequestFullscreen) {
+      appEl.webkitRequestFullscreen();
+    }
+  } catch {
+    // Ignore fullscreen failures (platform/browser restrictions).
+  } finally {
+    syncFullscreenLayoutState();
+  }
+}
 
 function createEmptyBoard() {
   return Array.from({ length: ROWS }, () => Array(COLS).fill(EMPTY_CELL));
@@ -869,89 +955,6 @@ function holdActivePiece() {
   startDropLoop();
 }
 
-function startContinuousHorizontalMove(action) {
-  const dx = action === "left" ? -1 : 1;
-  moveActivePiece(dx, 0);
-  stopContinuousTouchMove();
-  activeTouchMoveAction = action;
-  touchMoveTimerId = window.setInterval(() => {
-    moveActivePiece(dx, 0);
-  }, 105);
-}
-
-function startSoftDropTouch() {
-  if (!activePiece || isGameOver || isPaused || isLineClearAnimating) {
-    return;
-  }
-
-  if (!isSoftDropping) {
-    isSoftDropping = true;
-    startDropLoop();
-  }
-  moveActivePiece(0, 1);
-}
-
-function stopSoftDropTouch() {
-  if (!isSoftDropping) {
-    return;
-  }
-
-  isSoftDropping = false;
-  if (activePiece && !isGameOver && !isPaused && !isLineClearAnimating) {
-    startDropLoop();
-  }
-}
-
-function stopContinuousTouchMove() {
-  if (touchMoveTimerId) {
-    window.clearInterval(touchMoveTimerId);
-    touchMoveTimerId = null;
-  }
-  activeTouchMoveAction = null;
-}
-
-function handleTouchControlPress(action) {
-  if (action === "pause") {
-    togglePause();
-    return;
-  }
-
-  if (!activePiece || isGameOver || isPaused || isLineClearAnimating) {
-    return;
-  }
-
-  switch (action) {
-    case "left":
-    case "right":
-      startContinuousHorizontalMove(action);
-      break;
-    case "down":
-      startSoftDropTouch();
-      break;
-    case "rotate":
-      rotateActivePiece();
-      break;
-    case "hard-drop":
-      hardDropActivePiece();
-      break;
-    case "hold":
-      holdActivePiece();
-      break;
-    default:
-      break;
-  }
-}
-
-function handleTouchControlRelease(action) {
-  if (action === "down") {
-    stopSoftDropTouch();
-  }
-
-  if (action === activeTouchMoveAction) {
-    stopContinuousTouchMove();
-  }
-}
-
 function stepActivePieceDown() {
   if (!activePiece || isGameOver || isPaused || isLineClearAnimating) {
     return;
@@ -1063,12 +1066,16 @@ function initializeUI() {
   hardDropEffect = null;
   gameOverAnimStartMs = null;
   lastStepTimeMs = performance.now();
+  isTouchScreenDevice = detectTouchScreenDevice();
+  document.body.classList.toggle("touch-device", isTouchScreenDevice);
+  syncFullscreenLayoutState();
+  isTrackingTouchGesture = false;
+  stopMobileSoftDrop();
   clearPendingLineClearTimer();
   stopDropLoop();
   stopBackgroundMusic();
   drawNextPiecePreview();
   drawHoldPiecePreview();
-  stopContinuousTouchMove();
   startRenderLoop();
 }
 
@@ -1092,14 +1099,209 @@ function startNewGame() {
   hardDropEffect = null;
   gameOverAnimStartMs = null;
   lastStepTimeMs = performance.now();
+  stopMobileSoftDrop();
   clearPendingLineClearTimer();
   stopDropLoop();
   stopBackgroundMusic();
   drawHoldPiecePreview();
   spawnPieceFromQueue(true);
   startBackgroundMusic();
-  stopContinuousTouchMove();
   startDropLoop();
+}
+
+function detectTouchScreenDevice() {
+  return (
+    "ontouchstart" in window ||
+    navigator.maxTouchPoints > 0 ||
+    window.matchMedia("(pointer: coarse)").matches
+  );
+}
+
+function canUseTouchGameplay() {
+  return (
+    isTouchScreenDevice &&
+    activePiece &&
+    !isGameOver &&
+    !isPaused &&
+    !isLineClearAnimating
+  );
+}
+
+function handleMobileMoveLeft() {
+  if (!canUseTouchGameplay()) {
+    return;
+  }
+  moveActivePiece(-1, 0);
+}
+
+function handleMobileMoveRight() {
+  if (!canUseTouchGameplay()) {
+    return;
+  }
+  moveActivePiece(1, 0);
+}
+
+function handleMobileRotate() {
+  if (!canUseTouchGameplay()) {
+    return;
+  }
+  rotateActivePiece();
+}
+
+function startMobileSoftDrop() {
+  if (!canUseTouchGameplay()) {
+    return;
+  }
+
+  moveActivePiece(0, 1);
+  stopMobileSoftDrop();
+  mobileSoftDropTimerId = window.setInterval(() => {
+    if (!canUseTouchGameplay()) {
+      stopMobileSoftDrop();
+      return;
+    }
+    moveActivePiece(0, 1);
+  }, 80);
+}
+
+function stopMobileSoftDrop() {
+  if (!mobileSoftDropTimerId) {
+    return;
+  }
+  window.clearInterval(mobileSoftDropTimerId);
+  mobileSoftDropTimerId = null;
+}
+
+function handleMobileHardDrop() {
+  if (!canUseTouchGameplay()) {
+    return;
+  }
+  hardDropActivePiece();
+}
+
+function handleTouchStart(event) {
+  if (!appEl || !appEl.contains(event.target)) {
+    return;
+  }
+
+  // Prevent pinch zoom and browser gestures inside the game area.
+  if (event.touches.length > 1) {
+    event.preventDefault();
+    isTrackingTouchGesture = false;
+    return;
+  }
+
+  if (!isTouchScreenDevice) {
+    return;
+  }
+
+  if (event.target.closest("button")) {
+    return;
+  }
+
+  if (!canUseTouchGameplay()) {
+    return;
+  }
+
+  const touch = event.changedTouches[0];
+  if (!touch) {
+    return;
+  }
+
+  touchStartX = touch.clientX;
+  touchStartY = touch.clientY;
+  touchStartTimeMs = performance.now();
+  isTrackingTouchGesture = true;
+
+  const now = touchStartTimeMs;
+  if (now - lastTouchTapTimeMs < 320) {
+    event.preventDefault();
+  }
+  lastTouchTapTimeMs = now;
+
+  event.preventDefault();
+}
+
+function performTapAction(clientX, clientY) {
+  if (clientY < window.innerHeight * UPPER_ROTATE_REGION_RATIO) {
+    rotateActivePiece();
+    return;
+  }
+
+  if (clientX < window.innerWidth / 2) {
+    moveActivePiece(-1, 0);
+  } else {
+    moveActivePiece(1, 0);
+  }
+}
+
+function performSwipeDownAction(deltaY, elapsedMs) {
+  const swipeSpeed = deltaY / Math.max(elapsedMs, 1);
+  if (swipeSpeed >= FAST_SWIPE_SPEED_PX_PER_MS) {
+    hardDropActivePiece();
+    return;
+  }
+
+  const softDropSteps = Math.max(1, Math.min(4, Math.floor(deltaY / 70)));
+  for (let step = 0; step < softDropSteps; step += 1) {
+    if (!moveActivePiece(0, 1)) {
+      break;
+    }
+  }
+}
+
+function handleTouchEnd(event) {
+  if (!isTouchScreenDevice || !isTrackingTouchGesture) {
+    return;
+  }
+
+  const touch = event.changedTouches[0];
+  if (!touch) {
+    return;
+  }
+
+  const endX = touch.clientX;
+  const endY = touch.clientY;
+  const elapsedMs = performance.now() - touchStartTimeMs;
+  const deltaX = endX - touchStartX;
+  const deltaY = endY - touchStartY;
+  const distance = Math.hypot(deltaX, deltaY);
+  const isDownSwipe =
+    deltaY > SWIPE_DOWN_MIN_DISTANCE_PX && Math.abs(deltaY) > Math.abs(deltaX);
+
+  if (canUseTouchGameplay()) {
+    if (isDownSwipe) {
+      performSwipeDownAction(deltaY, elapsedMs);
+      event.preventDefault();
+    } else if (distance <= TAP_MAX_MOVEMENT_PX && elapsedMs <= TAP_MAX_DURATION_MS) {
+      performTapAction(endX, endY);
+      event.preventDefault();
+    }
+  }
+
+  isTrackingTouchGesture = false;
+}
+
+function handleTouchMove(event) {
+  if (!appEl || !appEl.contains(event.target)) {
+    return;
+  }
+
+  if (isTrackingTouchGesture || (hasGameStarted && isTouchScreenDevice)) {
+    event.preventDefault();
+  }
+}
+
+function handleTouchCancel() {
+  isTrackingTouchGesture = false;
+}
+
+function handleIOSGesture(event) {
+  if (!appEl || !appEl.contains(event.target)) {
+    return;
+  }
+
+  event.preventDefault();
 }
 
 function handleKeyDown(event) {
@@ -1175,36 +1377,82 @@ function handleKeyUp(event) {
 
 startBtn.addEventListener("click", startNewGame);
 restartBtn.addEventListener("click", startNewGame);
+if (fullscreenBtn) {
+  fullscreenBtn.addEventListener("click", toggleFullscreen);
+}
+if (installBtn) {
+  installBtn.addEventListener("click", promptInstall);
+}
 soundToggleBtn.addEventListener("click", () => {
   toggleMuted();
   ensureAudioContext();
 });
 
-for (const button of touchButtons) {
-  const action = button.dataset.action;
-  if (!action) {
-    continue;
-  }
-
-  button.addEventListener("pointerdown", (event) => {
+if (mobileLeftBtn) {
+  mobileLeftBtn.addEventListener("pointerdown", (event) => {
     event.preventDefault();
-    if (button.setPointerCapture && event.pointerId !== undefined) {
-      button.setPointerCapture(event.pointerId);
-    }
-    handleTouchControlPress(action);
+    handleMobileMoveLeft();
   });
+}
 
-  const release = (event) => {
+if (mobileRightBtn) {
+  mobileRightBtn.addEventListener("pointerdown", (event) => {
     event.preventDefault();
-    handleTouchControlRelease(action);
-  };
+    handleMobileMoveRight();
+  });
+}
 
-  button.addEventListener("pointerup", release);
-  button.addEventListener("pointercancel", release);
-  button.addEventListener("pointerleave", release);
+if (mobileRotateBtn) {
+  mobileRotateBtn.addEventListener("pointerdown", (event) => {
+    event.preventDefault();
+    handleMobileRotate();
+  });
+}
+
+if (mobileSoftDropBtn) {
+  mobileSoftDropBtn.addEventListener("pointerdown", (event) => {
+    event.preventDefault();
+    startMobileSoftDrop();
+  });
+  mobileSoftDropBtn.addEventListener("pointerup", stopMobileSoftDrop);
+  mobileSoftDropBtn.addEventListener("pointercancel", stopMobileSoftDrop);
+  mobileSoftDropBtn.addEventListener("pointerleave", stopMobileSoftDrop);
+}
+
+if (mobileHardDropBtn) {
+  mobileHardDropBtn.addEventListener("pointerdown", (event) => {
+    event.preventDefault();
+    handleMobileHardDrop();
+  });
 }
 
 document.addEventListener("keydown", handleKeyDown);
 document.addEventListener("keyup", handleKeyUp);
+appEl.addEventListener("touchstart", handleTouchStart, { passive: false });
+appEl.addEventListener("touchmove", handleTouchMove, { passive: false });
+appEl.addEventListener("touchend", handleTouchEnd, { passive: false });
+appEl.addEventListener("touchcancel", handleTouchCancel, { passive: true });
+appEl.addEventListener("gesturestart", handleIOSGesture, { passive: false });
+appEl.addEventListener("gesturechange", handleIOSGesture, { passive: false });
+appEl.addEventListener("gestureend", handleIOSGesture, { passive: false });
+document.addEventListener("fullscreenchange", syncFullscreenLayoutState);
+document.addEventListener("webkitfullscreenchange", syncFullscreenLayoutState);
+window.addEventListener("beforeinstallprompt", (event) => {
+  event.preventDefault();
+  deferredInstallPrompt = event;
+  updateInstallButtonVisibility();
+});
+window.addEventListener("appinstalled", () => {
+  deferredInstallPrompt = null;
+  updateInstallButtonVisibility();
+});
+
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("sw.js").catch(() => {
+      // Ignore registration failures.
+    });
+  });
+}
 
 initializeUI();

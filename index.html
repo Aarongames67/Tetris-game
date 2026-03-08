@@ -3,11 +3,42 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Tetris</title>
+    <title>Play Tetris Online - Free Browser Tetris Game</title>
+    <meta
+      name="description"
+      content="Play a free browser-based Tetris game with smooth controls, mobile support, fullscreen mode, and offline play. No download required."
+    />
+    <meta
+      name="keywords"
+      content="Tetris, browser game, online Tetris, free puzzle game, HTML5 game, JavaScript game, mobile game, PWA game"
+    />
+    <meta name="robots" content="index,follow" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Play Tetris Online - Free Browser Tetris Game" />
+    <meta
+      property="og:description"
+      content="A fast, free browser Tetris game with mobile controls, fullscreen mode, and offline support."
+    />
+    <meta property="og:image" content="icons/icon-512.svg" />
+    <meta property="og:site_name" content="Tetris" />
+    <meta name="theme-color" content="#0f172a" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black" />
+    <meta name="apple-mobile-web-app-title" content="Tetris" />
+    <link rel="manifest" href="manifest.json" />
+    <link rel="apple-touch-icon" href="icons/icon-192.svg" />
     <link rel="stylesheet" href="style.css" />
   </head>
   <body>
     <main class="app">
+      <header>
+        <h1>Tetris</h1>
+        <p>
+          Play classic Tetris in your browser. Rotate pieces, clear lines, and
+          beat your high score on desktop or mobile.
+        </p>
+      </header>
+
       <div class="game-layout">
         <section class="board-wrap">
           <canvas
@@ -21,16 +52,8 @@
           <div class="controls">
             <button id="startBtn" type="button">Start Game</button>
             <button id="restartBtn" type="button">Restart Game</button>
-          </div>
-
-          <div class="touch-controls" aria-label="Touch controls for mobile">
-            <button class="touch-btn" data-action="left" type="button" aria-label="Move left">←</button>
-            <button class="touch-btn" data-action="rotate" type="button" aria-label="Rotate">↑</button>
-            <button class="touch-btn" data-action="right" type="button" aria-label="Move right">→</button>
-            <button class="touch-btn" data-action="down" type="button" aria-label="Soft drop">↓</button>
-            <button class="touch-btn" data-action="hard-drop" type="button" aria-label="Hard drop">DROP</button>
-            <button class="touch-btn" data-action="hold" type="button" aria-label="Hold piece">HOLD</button>
-            <button class="touch-btn" data-action="pause" type="button" aria-label="Pause or resume">PAUSE</button>
+            <button id="fullscreenBtn" type="button">Fullscreen</button>
+            <button id="installBtn" type="button" hidden>Install</button>
           </div>
         </section>
 
@@ -77,9 +100,17 @@
             <p class="instruction-line">Keyboard: ← → move</p>
             <p class="instruction-line">Keyboard: ↑ rotate, ↓ soft drop</p>
             <p class="instruction-line">Keyboard: Space drop, C hold, P pause</p>
-            <p class="instruction-line">Mobile: use arrow buttons below board</p>
+            <p class="instruction-line">Mobile: responsive view supported (keyboard controls)</p>
           </div>
         </aside>
+      </div>
+
+      <div class="mobile-controls" aria-label="Mobile controls">
+        <button id="mobileLeftBtn" class="mobile-btn" type="button" aria-label="Move left">Left</button>
+        <button id="mobileRotateBtn" class="mobile-btn" type="button" aria-label="Rotate piece">Rotate</button>
+        <button id="mobileRightBtn" class="mobile-btn" type="button" aria-label="Move right">Right</button>
+        <button id="mobileSoftDropBtn" class="mobile-btn" type="button" aria-label="Soft drop">Soft Drop</button>
+        <button id="mobileHardDropBtn" class="mobile-btn" type="button" aria-label="Hard drop">Hard Drop</button>
       </div>
 
       <p class="status" id="status" aria-live="polite"></p>
